@@ -1,0 +1,40 @@
+---
+- name: Install MariaDB service
+  yum:
+    name: mariadb-server
+    state: present
+- name: Start and enable MariaDB service
+  service:
+    name: mariadb
+    state: started
+    enabled: yes
+- name: Configure firewall for the Database
+  firewalld:
+    zone: public
+    permanent: yes
+    port: 3306/tcp
+    state: enabled
+- name: Reload firewalld service
+  systemd:
+    name: firewalld
+    state: reloaded
+- name: Install mysql dependent modules on the host
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+      - MySQL-python
+- name: Create a new database with name 'ecomdb'
+  mysql_db:
+    name: "{{ db_name }}"
+    state: present
+- name: Create database user with password and all database privileges and 'WITH GRANT OPTION'
+  mysql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    priv: '*.*:ALL,GRANT'
+    state: present
+- name: Create sql file with query to Load Product Inventory Information to database
+  command: wget https://raw.githubusercontent.com/kodekloudhub/learning-app-ecommerce/master/assets/db-load-script.sql
+- name: Load Product Inventory Information to database
+  shell: mysql < db-load-script.sql
